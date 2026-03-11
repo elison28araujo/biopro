@@ -21,16 +21,29 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Tentando login...');
+      console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+        throw new Error('As chaves do Supabase não foram configuradas corretamente no Vercel. Verifique as Variáveis de Ambiente e faça um Redeploy.');
+      }
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (authError) {
+        console.error('Erro do Supabase:', authError);
+        throw authError;
+      }
 
+      console.log('Sucesso!', data);
       router.push('/dashboard');
+      router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login');
+      console.error('Erro capturado:', err);
+      setError(err.message || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setIsLoading(false);
     }
