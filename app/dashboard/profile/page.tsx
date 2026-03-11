@@ -12,6 +12,10 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [formData, setFormData] = useState({
     full_name: '',
     bio: '',
@@ -43,7 +47,41 @@ export default function ProfilePage() {
       }
       setIsLoading(false);
     });
+
+    // Get current email
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setNewEmail(user.email);
+    });
   }, [loadProfile]);
+
+  async function handleUpdateEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setIsUpdatingEmail(true);
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    if (error) {
+      alert('Erro ao atualizar e-mail: ' + error.message);
+    } else {
+      alert('Um link de confirmação foi enviado para o novo e-mail.');
+    }
+    setIsUpdatingEmail(false);
+  }
+
+  async function handleUpdatePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+    setIsUpdatingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      alert('Erro ao atualizar senha: ' + error.message);
+    } else {
+      alert('Senha atualizada com sucesso!');
+      setNewPassword('');
+    }
+    setIsUpdatingPassword(false);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -156,6 +194,55 @@ export default function ProfilePage() {
             </Button>
           </div>
         </form>
+      </div>
+
+      <div className="mt-12">
+        <header className="mb-8">
+          <h2 className="text-2xl font-bold">Segurança</h2>
+          <p className="text-slate-500 text-sm">Gerencie seu acesso à conta.</p>
+        </header>
+
+        <div className="space-y-6">
+          {/* Email Update */}
+          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+            <form onSubmit={handleUpdateEmail} className="space-y-4">
+              <h3 className="font-bold text-lg">Alterar E-mail</h3>
+              <Input 
+                label="Novo E-mail" 
+                type="email"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                placeholder="seu-novo@email.com"
+                required
+              />
+              <div className="flex justify-end">
+                <Button type="submit" isLoading={isUpdatingEmail} variant="outline">
+                  Atualizar E-mail
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          {/* Password Update */}
+          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <h3 className="font-bold text-lg">Alterar Senha</h3>
+              <Input 
+                label="Nova Senha" 
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+              <div className="flex justify-end">
+                <Button type="submit" isLoading={isUpdatingPassword} variant="outline">
+                  Atualizar Senha
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
