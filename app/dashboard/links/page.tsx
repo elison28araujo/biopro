@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Link as LinkType } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -14,23 +14,30 @@ export default function LinksPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [newLink, setNewLink] = useState({ title: '', url: '' });
 
-  useEffect(() => {
-    const loadLinks = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const loadLinks = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
 
-      const { data } = await supabase
-        .from('links')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('sort_order', { ascending: true });
+    const { data } = await supabase
+      .from('links')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('sort_order', { ascending: true });
 
-      setLinks(data || []);
-      setIsLoading(false);
-    };
-
-    loadLinks();
+    return data || [];
   }, []);
+
+  useEffect(() => {
+    loadLinks().then(data => {
+      setLinks(data);
+      setIsLoading(false);
+    });
+  }, [loadLinks]);
+
+  const refreshLinks = useCallback(async () => {
+    const data = await loadLinks();
+    setLinks(data);
+  }, [loadLinks]);
 
   async function handleAddLink(e: React.FormEvent) {
     e.preventDefault();
@@ -47,24 +54,24 @@ export default function LinksPage() {
     if (!error) {
       setNewLink({ title: '', url: '' });
       setIsAdding(false);
-      loadLinks();
+      refreshLinks();
     }
   }
 
   async function toggleActive(id: string, current: boolean) {
     await supabase.from('links').update({ is_active: !current }).eq('id', id);
-    loadLinks();
+    refreshLinks();
   }
 
   async function toggleHighlight(id: string, current: boolean) {
     await supabase.from('links').update({ is_highlighted: !current }).eq('id', id);
-    loadLinks();
+    refreshLinks();
   }
 
   async function deleteLink(id: string) {
     if (confirm('Tem certeza que deseja excluir este link?')) {
       await supabase.from('links').delete().eq('id', id);
-      loadLinks();
+      refreshLinks();
     }
   }
 

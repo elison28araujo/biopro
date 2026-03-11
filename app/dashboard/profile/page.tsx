@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -18,17 +18,21 @@ export default function ProfilePage() {
     avatar_url: ''
   });
 
+  const loadProfile = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    return data;
+  }, []);
+
   useEffect(() => {
-    const loadProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
+    loadProfile().then(data => {
       if (data) {
         setProfile(data);
         setFormData({
@@ -38,10 +42,8 @@ export default function ProfilePage() {
         });
       }
       setIsLoading(false);
-    };
-
-    loadProfile();
-  }, []);
+    });
+  }, [loadProfile]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
