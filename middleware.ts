@@ -58,8 +58,10 @@ export async function middleware(req: NextRequest) {
   });
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const session = !!user;
 
   // Protect dashboard routes
   if (req.nextUrl.pathname.startsWith('/dashboard')) {
