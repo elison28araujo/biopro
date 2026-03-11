@@ -1,37 +1,76 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  
+  let res = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables in middleware');
     return res;
   }
 
-  try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return req.cookies.get(name)?.value;
+      },
+      set(name: string, value: string, options: CookieOptions) {
+        req.cookies.set({
+          name,
+          value,
+          ...options,
+        });
+        res = NextResponse.next({
+          request: {
+            headers: req.headers,
+          },
+        });
+        res.cookies.set({
+          name,
+          value,
+          ...options,
+        });
+      },
+      remove(name: string, options: CookieOptions) {
+        req.cookies.set({
+          name,
+          value: '',
+          ...options,
+        });
+        res = NextResponse.next({
+          request: {
+            headers: req.headers,
+          },
+        });
+        res.cookies.set({
+          name,
+          value: '',
+          ...options,
+        });
+      },
+    },
+  });
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-    // Protect dashboard routes
-    if (req.nextUrl.pathname.startsWith('/dashboard')) {
-      if (!session) {
-        return NextResponse.redirect(new URL('/login', req.url));
-      }
+  // Protect dashboard routes
+  if (req.nextUrl.pathname.startsWith('/dashboard')) {
+    if (!session) {
+      return NextResponse.redirect(new URL('/login', req.url));
     }
+  }
 
-    // Redirect logged in users from auth pages
-    if (session && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register')) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-  } catch (error) {
-    console.error('Middleware execution failed:', error);
+  // Redirect logged in users from auth pages
+  if (session && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register' || req.nextUrl.pathname === '/start')) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   return res;
