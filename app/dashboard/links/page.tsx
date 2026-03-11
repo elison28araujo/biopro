@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, GripVertical, ExternalLink, ToggleLeft, ToggleRight, Star, Link as LinkIcon } from 'lucide-react';
 import { motion, Reorder } from 'motion/react';
+import { cn } from '@/lib/utils';
 
 export default function LinksPage() {
   const [links, setLinks] = useState<LinkType[]>([]);
@@ -187,5 +188,3 @@ export default function LinksPage() {
     </div>
   );
 }
-
-import { cn } from '@/lib/utils';
